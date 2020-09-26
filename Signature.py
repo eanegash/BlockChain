@@ -1,4 +1,4 @@
-# Signatures.py
+# Signature.py
 
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.asymmetric import rsa
