@@ -5,9 +5,11 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.exceptions import InvalidSignature
+from cryptography.hazmat.primitives import serialization
 
 
 ## Generate a new RSA private key using the provided backend.
+## Private and Public keys (CompiledFFF objects) classes are not written in Python: imported -> compiled -> imported back into pthon.
 def generate_keys():
     private_key = rsa.generate_private_key(
         public_exponent = 65537,
@@ -16,8 +18,14 @@ def generate_keys():
     )
 
     public_key = private_key.public_key()
+    # Serialization. Public and Private keys that have been loaded or generated w/ 
+    # RSAPrivateKeyWithSerialization interface can be serialized using private_bytes()/public_bytes()
+    pu_ser = public_key.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format = serialization.PublicFormat.SubjectPublicKeyInfo
+    )
     
-    return private_key, public_key
+    return private_key, pu_ser
 
 ## Private key is used to sign a message. This allows anyone with the public key to verify that the message 
 ## was created by someone who possesses the corresponding private key. 
@@ -36,7 +44,14 @@ def sign(message, private_key):
     return sig
 
 ## Verifies that the private key associated with a given public key was used to sign the message.
-def verify(message, sig, public):
+def verify(message, sig, pu_ser):
+    
+    # Serilization
+    public = serialization.load_pem_public_key(
+        pu_ser,
+        backend = default_backend()
+    )
+
     message = bytes(str(message), 'utf-8')
     try:
         public.verify(
