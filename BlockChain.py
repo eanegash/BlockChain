@@ -20,6 +20,11 @@ class CBlock:
         
         return digest.finalize()
 
+    def is_valid(self):
+        #DANGEROUS TO DUE --> Only one valid with previous block of None is the Genesis Block
+        if self.previousBlock.computeHash() == None:
+            return True
+        return self.previousBlock.computeHash() == self.previousHash
 
 class someClass:
     num = 328965
