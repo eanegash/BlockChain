@@ -21,9 +21,14 @@ class CBlock:
         return digest.finalize()
 
     def is_valid(self):
-        #DANGEROUS TO DUE --> Only one valid with previous block of None is the Genesis Block
-        if self.previousBlock.computeHash() == None:
+        #DANGEROUS TO DUE --> Only valid previous block of None is the Genesis Block
+        if self.previousBlock == None:
             return True
+
+        for tx in self.data:
+            if not tx.is_valid():
+                return False
+
         return self.previousBlock.computeHash() == self.previousHash
 
 class someClass:

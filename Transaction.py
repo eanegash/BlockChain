@@ -65,9 +65,12 @@ class Tx:
                 return False
             total_out = total_out + amount
 
+        ''' 
+        # Remove as Miners best interest to have transactions where outputs > inputs.
+        # Miners will be performing these checks.
         if total_out > total_in:
             return False
-
+        '''
         return True
 
     # Private Member Function to Tx class. Collects data.
@@ -78,7 +81,27 @@ class Tx:
         data.append(self.reqd)
         return data
 
+    # Called when converting to a string
+    def __repr__(self):
+        reprstr = "INPUTS:\n"
+        for addr, amt in self.inputs:
+            reprstr = reprstr + str(amt) + " from " + str(addr) + "\n"
+        
+        reprstr = reprstr + "OUTPUTS:\n"
+        for addr, amt in self.outputs:
+            reprstr = reprstr + str(amt) + " to " + str(addr) + "\n"
 
+        reprstr = reprstr + "REQD:\n"
+        for r in self.reqd:
+            reprstr = reprstr + str(r) + "\n"
+
+        reprstr = reprstr + "SIGS:\n"
+        for s in self.sigs:
+            reprstr = reprstr + str(s) + "\n"
+
+        reprstr = reprstr + "END\n"
+
+        return reprstr
 
 
 
