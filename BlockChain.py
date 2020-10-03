@@ -13,6 +13,7 @@ class CBlock:
         if previousBlock != None:
             self.previousHash = previousBlock.computeHash()
 
+    ## Returns the computed Hash of the BlockChain.
     def computeHash(self):
         digest = hashes.Hash(hashes.SHA256(), backend=default_backend())
         digest.update(bytes(str(self.data), 'utf-8'))
@@ -20,6 +21,8 @@ class CBlock:
         
         return digest.finalize()
 
+    ## Returns Boolean.
+    ## Determines the validity of the previouse Hash record in the BlockChain, using the new Block in the Chain.
     def is_valid(self):
         #DANGEROUS TO DUE --> Only valid previous block of None is the Genesis Block
         if self.previousBlock == None:
