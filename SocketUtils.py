@@ -11,9 +11,9 @@ BUFFER_SIZE = 1024
 
 ###
 ###
-def newServerConnect(ip_addr):
+def newServerConnect(ip_addr, port=TCP_PORT):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.bind((ip_addr, TCP_PORT))
+    s.bind((ip_addr, port))
     s.listen() 
 
     return s
@@ -43,9 +43,9 @@ def recvObj(socket):
 
 ###
 ###
-def sendBlock(ip_addr, blk):
+def sendBlock(ip_addr, blk, port=TCP_PORT):
     s = socket.socket(socket.AF_INET, socket.SOCKET_STREAM)
-    s.connect((ip_addr, TCP_PORT))
+    s.connect((ip_addr, port))
 
     data = pickle.dumps(blk)
     s.send(data)
