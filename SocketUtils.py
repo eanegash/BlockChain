@@ -44,7 +44,7 @@ def recvObj(socket):
 ###
 ###
 def sendBlock(ip_addr, blk, port=TCP_PORT):
-    s = socket.socket(socket.AF_INET, socket.SOCKET_STREAM)
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.connect((ip_addr, port))
 
     data = pickle.dumps(blk)

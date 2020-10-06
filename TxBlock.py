@@ -11,7 +11,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
 
-leading_zeros = 2
+leading_zeros = 1
 limit_next_char = 25
 
 
@@ -53,7 +53,7 @@ class TxBlock (CBlock):
 
         return total_in, total_out
 
-    ### NOTE: Implementat a separate Miner Class and Add these methods to it
+    ### NOTE: Implement a separate Miner Class and Add these methods to it
     ## Returns a Boolean. 
     ## Determines the Nonce's validity. 
     def valid_nonce(self):
@@ -64,14 +64,14 @@ class TxBlock (CBlock):
 
         this_hash =  digest.finalize()
 
-        if this_hash[:leading_zeros] != ''.join(["\x00" for i in range(leading_zeros)]): 
+        if this_hash[:leading_zeros] != ''.join(["\x00" for i in range(leading_zeros)]):
             return False
         
         return int(this_hash[leading_zeros]) < limit_next_char
 
     ## Returns Nonce or None. Once Nonce is determined to be valid or not. 
-    def find_nonce(self):
-        for i in range(500000):
+    def find_nonce(self, n=500000):
+        for i in range(n):
             self.nonce = ''.join([ chr(random.randint(0, 255)) for i in range(10*leading_zeros)])
         
             if self.valid_nonce():
