@@ -71,6 +71,54 @@ def verify(message, sig, pu_ser):
         print("Error executing public_key.verify")
         return False
 
+
+##
+def savePrivate(private_key, filename):
+    em = private_key.private_bytes(
+        encoding = serialization.Encoding.PEM,
+        format = serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm = serialization.NoEncryption()
+    )
+
+    fp = open(filename, "wb")
+    fp.write(pem)
+    fp.close()
+
+    return
+
+##
+def loadPrivate(filename):
+    fin = open(filename, "rb")
+    
+    private_key = serialization.load_pem_private_ley(
+        fin.read(),
+        password = None,
+        backend = default_backend()
+    )
+    
+    fin.close()
+    
+    return pr_key
+
+##
+def savePublic(pu_key, filename):
+    fp = open(filename, "wb")
+    fp.write(pu_key)
+    fp.close
+
+    return True
+
+##
+def loadPublic(filename):
+    
+    fin = open(filename, "rb")
+    pu_key = fin.read()
+    fin.close()
+
+    return pu_key
+
+
+
 # Tests
 if __name__ == "__main__":
     pr, pu = generate_keys()

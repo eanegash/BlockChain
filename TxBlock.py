@@ -11,8 +11,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
 
-leading_zeros = 1
-limit_next_char = 25
+leading_zeros = 2
+limit_next_char = 255
 
 
 class TxBlock (CBlock):
@@ -79,6 +79,25 @@ class TxBlock (CBlock):
 
         return None
 
+# Return the longest block in the blockhain. 
+def findLongestBlockchain(head_blocks):
+    #UPDATE
+    longest = -1
+    long_head = None
+
+    for b in head_blocks:
+        current = b
+        this_len = 0
+
+        while current != None:
+            this_len += 1
+            current = current.previousBlock
+
+        if this_len > longest:
+            long_head = b
+            longest = this_len
+
+    return long_head
 
 
 if __name__ == "__main__":

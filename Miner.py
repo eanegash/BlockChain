@@ -1,12 +1,10 @@
 # Miner
 
-import threading
-import time
+
 import SocketUtils
 import TxBlock
 import Transaction
-import Signature
-
+import pickle
 
 # Currently designed with 'Full Wallet' implementation
 
@@ -15,25 +13,9 @@ tx_list = []
 head_blocks = [None]
 break_now = False
 
-# Return the longest block in the blockhain. 
-def findLongestBlockchain():
-    #UPDATE
-    longest = -1
-    long_head = None
 
-    for b in head_blocks:
-        current = b
-        this_len = 0
-
-        while current != None:
-            this_len += 1
-            current = current.previousBlock
-
-        if this_len > longest:
-            long_head = b
-            longest = this_len
-
-    return long_head
+def StopAll():
+    break_now = True
 
 
 ## Miner computes new Nonce and sets Block to the top of the BlockChain.
@@ -65,7 +47,7 @@ def nonceFinder(wallet_list, miner_public):
 
     # Collect transactions into a block
     while not break_now:
-        newBlock = TxBlock.TxBlock(findLongestBlockchain()) 
+        newBlock = TxBlock.TxBlock(TxBlock.findLongestBlockchain(head_blocks)) 
         for tx in tx_list:
             newBlock.addTx(tx)
  
@@ -81,20 +63,47 @@ def nonceFinder(wallet_list, miner_public):
         if newBlock.valid_nonce():
             print("Success! Good nonce found.")
 
-            # Send block to everyone in the wallet_list
-            for ip_addr, port in wallet_list:
-                SocketUtils.sendObj(ip_addr, newBlock, 5006)
-
             # Replace the previously longest head in the set of blocks
             head_blocks.remove(newBlock.previousBlock)
             head_blocks.append(newBlock)
+
+            # Send block to everyone in the wallet_list. Wallet will package block.
+            savePrev = newBlock.previousBlock
+            newBlock.previousBlock = None
+            for ip_addr, port in wallet_list:
+                SocketUtils.sendObj(ip_addr, newBlock, 5006)
+            newBlock.previousBlock = savePrev
+
+            # Remove used transactions from tx_list
+            for tx in newBlock.data:
+                if tx != miner_reward:
+                    tx_list.remove(tx)
+
+    return True
+
+##
+def loadTxList(filename):
+    fin = open(filename, "rb")
+    ret = pickle.load(fin)
+    fin.close()
+
+    return ret
+
+##
+def saveTxList(the_list, filename):
+    fp = open(filename, "wb")
+    pickle.dump(the_list, fp)
+    fp.close
 
     return True
 
 
 
+if __name__ == "__main__":
+    import threading
+    import time
+    import Signature
 
-if __name__ == "__main__": 
     my_pr, my_pu = Signature.generate_keys()
     # args need to be passed as a TUPLE.
     t1 = threading.Thread(target=minerServer, args=(('localhost', 5005),))
@@ -125,22 +134,27 @@ if __name__ == "__main__":
     Tx2.sign(pr3)
     Tx2.sign(pr1)
 
+    new_tx_list = [Tx1, Tx2]
+    saveTxList(new_tx_list, "Txs.dat")
+    new_new_tx_list = loadTxList("Txs.dat")
+
     print(Tx1.is_valid())
     print(Tx2.is_valid())
 
-    try:
-        SocketUtils.sendBlock('localhost',Tx1)
-        print("Tx1 Sent")
-        SocketUtils.sendBlock('localhost',Tx2)
-        print("Tx2 Sent")
-    except:
-        print("ERROR. Unsuccessful connection.")
-    print('**********************1')
+    for tx in new_new_tx_list:
+       try:
+            SocketUtils.sendBlock('localhost',Tx1)
+            print("Tx1 Sent")
+            SocketUtils.sendBlock('localhost',Tx2)
+            print("Tx2 Sent")
+        except:
+            print("ERROR. Unsuccessful connection.")
+    
     for i in range(30):
         newBlock = SocketUtils.recvObj(server)
         if newBlock:
             break
-    print('**********************2')
+    
     if newBlock.is_valid():
         print("Success! Block is valid.")
     if newBlock.valid_nonce():
@@ -159,7 +173,7 @@ if __name__ == "__main__":
             pass
 
     time.sleep(20)
-    break_now = True
+    StopAll()
     time.sleep(2)
 
     server.close()

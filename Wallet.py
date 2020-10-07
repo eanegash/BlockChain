@@ -1,12 +1,11 @@
 # Wallet
 
-import time
+
 import SocketUtils
-import Signature
 import Transaction
-import Miner
-import threading
 import TxBlock
+import pickle
+import Signature
 
 
 break_now = False
@@ -14,12 +13,18 @@ head_blocks = [None]
 wallets  = [('localhost', 5006)]
 miners = [('localhost', 5000)]
 
+my_private, my_public = Signature.generate_keys()
+
+def StopAll():
+    break_now = True
 
 ##
 def walletServer(my_addr):
+    global head_blocks
+    head_blocks = [None]
     server = SocketUtils.newServerConnect('localhost', 5006)
 
-    while not break_now
+    while not break_now:
         newBlock = SocketUtils.recvObj(server)
         if isinstance(newBlock, TxBlock.TxBlock):
             print("Rec'd block")
@@ -27,32 +32,84 @@ def walletServer(my_addr):
                 if b == None:
                     if newBlock.previousHash == None:
                         newBlock.previousBlock = b
+                        if not newBlock.is_valid():
+                            print("Nonce isn't valid.")
+                        else:
+                            head_blocks.remove(b)
+                            head_blocks.append(newBlock)
+                            print("Added to head_block")
+                elif newBlock.previousHash == b.computeHash():
+                    newBlock.previousBlock = b
+                    if not newBlock.is_valid():
+                        print("Nonce isn't valid.")
+                    else:                    
                         head_blocks.remove(b)
                         head_blocks.append(newBlock)
-                        print("Added to head_block")
-                if newBlock.previousHash == b.computeHash():
-                    newBlock.previousBlock = b
-                    head_blocks.remove(b)
-                    head_blocks.append(newBlock)
-                    print("Added to head_block")    
+                        print("Added to head_block")    
     
                 #TODO Add to an non-head block.
+
     server.close()  
 
     return True
 
 ##
 def getbalance(pu_key):
-    return 0.0
+    long_chain = TxBlock.findLongestBlockchain(head_blocks)
+    this_block = long_chain
+    bal = 0.0
+
+    while this_block is not None:
+        for tx in this_block.data:
+            for addr, amt in tx.inputs:
+                if addr == pu_key:
+                    bal -= amt
+            for addr, amt in tx.outputs:
+                if addr == pu_key:
+                    bal += amt
+
+        this_block = this_block.previousBlock
+
+    return bal
+
 
 ##
 def sendCoins(pu_send, amt_send, pr_send, pu_recv, amt_recv, miners_list_addr):
+    newTx = Transaction.Tx()
+    newTx.add_input(pu_send, amt_send)
+    newTx.add_output(pu_recv, amt_recv)
+    newTx.sign(pr_send)
+    SocketUtils.sendBlock('localhost',newTx)
     return True
 
+
+##
+def loadKeys(pr_file, pu_file):
+    return Signature.loadPrivate(pr_file), Signature.loadPublic(pu_file)
+
+##
+def saveBlocks(block_list, filename):
+    fp = open(filename, "wb")
+    pickle.dump(block_list, fp)
+    fp.close()
+
+    return False
+
+##
+def loadBlocks(filename):
+    fin = open(filename, "rb")
+    ret = pickle.load(fin)
+    fin.close()
+    return ret
 
 
 
 if __name__ == "__main__":
+    import Signature
+    import Miner
+    import threading
+    import time
+
     miner_pr, miner_pu = Signature.generate_keys()
     # Need args to be passed a TUPLE.
     t1 = threading.Thread(target=Miner.minerServer, args=(('localhost', 5005),))
@@ -63,7 +120,7 @@ if __name__ == "__main__":
     t2.start()
     t3.start()
 
-    pr1, pu1 = Signature.generate_keys()
+    pr1, pu1 = loadKeys("private.key", "public.key")
     pr2, pu2 = Signature.generate_keys()
     pr3, pu3 = Signature.generate_keys()
 
@@ -76,6 +133,10 @@ if __name__ == "__main__":
     sendCoins(pu1, 1.0, pr1, pu2, 1.0, miners)
     sendCoins(pu1, 1.0, pr1, pu3, 0.3, miners)
 
+    #
+    saveBlocks(head_blocks, "AllBlocks.dat")
+    head_blocks = loadBlocks("AlBlocks.dat")
+
     time.sleep(30)
 
     #
@@ -84,7 +145,7 @@ if __name__ == "__main__":
     new3 = getbalance(pu1)
 
     #
-    if abs(new1 - bal1 + 1.3) > 0.00000001:
+    if abs(new1 - bal1 + 2.0) > 0.00000001:
         print("Error! Wrong balance for pu1")
     else:
         print('Success. Balance is correct for pu1')
@@ -99,8 +160,8 @@ if __name__ == "__main__":
     else:
         print('Success. Balance is correct for pu3')
 
-    Miner.break_now = True
-    break_now = True
+    Miner.StopAll
+    StopAll()
     t1.join()
     t2.join()
     t3.join()
