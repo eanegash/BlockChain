@@ -21,7 +21,16 @@ def StopAll():
 ##
 def walletServer(my_addr):
     global head_blocks
-    head_blocks = [None]
+    
+    # Load head_blocks
+    try:
+        # Save Wallet blocks to different file to Miner: AllBlocks.dat. 
+        # Otherwise dangerous to read at the same time if you were writing to the same file.
+        head_blocks = TxBlock.loadBlocks("WalletBlocks.dat")
+    except:
+        print("WS: No previous blocks found. Starting fresh.")
+        head_blocks = [None]
+    
     server = SocketUtils.newServerConnect('localhost', 5006)
 
     while not break_now:
@@ -48,6 +57,9 @@ def walletServer(my_addr):
                         print("Added to head_block")    
     
                 #TODO Add to an non-head block.
+    
+    # Save head_block
+    TxBlock.saveBlocks(head_blocks, "WalletBlocks.dat")
 
     server.close()  
 
@@ -87,20 +99,6 @@ def sendCoins(pu_send, amt_send, pr_send, pu_recv, amt_recv, miners_list_addr):
 def loadKeys(pr_file, pu_file):
     return Signature.loadPrivate(pr_file), Signature.loadPublic(pu_file)
 
-##
-def saveBlocks(block_list, filename):
-    fp = open(filename, "wb")
-    pickle.dump(block_list, fp)
-    fp.close()
-
-    return False
-
-##
-def loadBlocks(filename):
-    fin = open(filename, "rb")
-    ret = pickle.load(fin)
-    fin.close()
-    return ret
 
 
 
@@ -124,22 +122,40 @@ if __name__ == "__main__":
     pr2, pu2 = Signature.generate_keys()
     pr3, pu3 = Signature.generate_keys()
 
-    #
+    # Gather Balance
     bal1 = getbalance(pu1)
     bal2 = getbalance(pu1)
     bal3 = getbalance(pu1)
 
-    #
-    sendCoins(pu1, 1.0, pr1, pu2, 1.0, miners)
-    sendCoins(pu1, 1.0, pr1, pu3, 0.3, miners)
+    # Send Coins
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu2, 0.1, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
+    sendCoins(pu1, 0.1, pr1, pu3, 0.03, miners)
 
-    #
-    saveBlocks(head_blocks, "AllBlocks.dat")
-    head_blocks = loadBlocks("AlBlocks.dat")
+    time.sleep(120)
 
-    time.sleep(30)
+    # Load (Save) all blocks
+    TxBlock.saveBlocks(head_blocks, "AllBlocks.dat")
+    head_blocks = TxBlock.loadBlocks("AlBlocks.dat")
 
-    #
+    # Gather Balance
     new1 = getbalance(pu1)
     new2 = getbalance(pu1)
     new3 = getbalance(pu1)

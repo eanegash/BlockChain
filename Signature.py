@@ -117,6 +117,9 @@ def loadPublic(filename):
 
     return pu_key
 
+## Return the Private and Public load files.
+def loadKeys(pr_file, pu_file):
+    return loadPrivate(pu_file), loadPublic(pu_file)
 
 
 # Tests

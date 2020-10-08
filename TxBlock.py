@@ -24,7 +24,27 @@ class TxBlock (CBlock):
     def addTx(self, Tx_in):
         self.data.append(Tx_in)
 
+    def removeTx(self, Tx_in):
+        if Tx_in in self.data:
+            self.data.remove(Tx_in)
+            return True
+        return False
+
+    ##
+    def check_size(self):
+        savePrev = this.previousBlock
+        self.previousBlock = None
+        this_size = len(pickle.dumps(self))
+        self.previousBlock = savePrev
+
+        if this_size > 10000:
+            return False
+        
+        return True
+
+    ## Returns True if total output is greater than total input and 25 WurkiCoin reward.
     def is_valid(self):
+        # Reference to Parent Class CBlock.is_valid() method.
         if not super(TxBlock, self).is_valid():
             return False
 
@@ -36,7 +56,9 @@ class TxBlock (CBlock):
         # NOTE: REFACTOR when transaction amount needs to be less than 1*10^12
         if total_out - total_in - 25.0 > 0.000000000001:
             return False
-        
+        if not self.check_size():
+            return False
+            
         return True
 
     def count_totals(self):
@@ -99,6 +121,21 @@ def findLongestBlockchain(head_blocks):
 
     return long_head
 
+##
+def saveBlocks(block_list, filename):
+    fp = open(filename, "wb")
+    pickle.dump(block_list, fp)
+    fp.close()
+
+    return False
+
+##
+def loadBlocks(filename):
+    fin = open(filename, "rb")
+    ret = pickle.load(fin)
+    fin.close()
+    return ret
+
 
 if __name__ == "__main__":
     pr1, pu1 = generate_keys()
@@ -125,7 +162,14 @@ if __name__ == "__main__":
     loadfile.close()
 
     root = TxBlock(None)
+
+    mine1 = Tx()
+    mine1.add_output(pu1, 8.0)
+    mine1.add_output(pu2, 8.0)
+    mine1.add_output(pu3, 8.0)
+
     root.addTx(Tx1)
+    root.addTx(mine1)
 
     Tx2 = Tx()
     Tx2.add_input(pu2, 1.1)
@@ -237,3 +281,75 @@ if __name__ == "__main__":
         print("Success! Greedy miner detected.")
     else:
         print("ERROR! Greedy miner not detected.")
+
+    
+    B6 = TxBlock(B4)
+    this_pu = pu4
+    this_pr = pr4
+
+    for i in range(30):
+        newTx = Tx()
+        new_pr, new_pu = generate_keys()
+        newTx.add_input(this_pu, 0.3)
+        newTx.add_output(new_pu, 0.3)
+        newTx.sign(this_pr)
+        B6.addTx(newTx)
+
+        this_pu = new_pu
+        this_pr = new_pr
+
+        savePrev = B6.previousBlock
+        B6.previousBlock = None
+        this_size = len(pickle.dumps(B6))
+        B6.previousBlock = savePrev
+
+        if (B6.is_valid()) and this_size > 10000:
+            print("ERROR!! Big Blocks are valid. Size = " + str(this_size))
+        elif not B6.is_valid and this_size <= 10000:
+            print("ERROR! Small blocks are invalid. Size = " + str(this_size))
+        else:
+            print("Success! Block size check passed")
+    
+    overspend = Tx()
+    overspend.add_input(pu1, 45.0)
+    overspend.add_output(pu1, 44.5)
+    overspend.sign(pr1)
+    B7 = TxBlock(B4)
+    B7.addTx(overspend)
+
+    if B7.is_valid():
+        print("Error! Overspend not detected")
+    else:
+        print("Success! Overspend detected")
+
+
+    overspend1 = Tx()
+    overspend1.add_input(pu1, 5.0)
+    overspend1.add_output(pu1, 4.5)
+    overspend1.sign(pr1)
+
+    overspend2 = Tx()
+    overspend2.add_input(pu1, 15.0)
+    overspend2.add_output(pu3, 14.5)
+    overspend2.sign(pr1)
+
+    overspend3 = Tx()
+    overspend3.add_input(pu1, 5.0)
+    overspend3.add_output(pu4, 4.5)
+    overspend3.sign(pr1)
+
+    overspend4 = Tx()
+    overspend4.add_input(pu1, 8.0)
+    overspend4.add_output(pu2, 4.5)
+    overspend4.sign(pr1)
+    
+    B8 = TxBlock(B4)
+    B8.addTx(overspend1)
+    B8.addTx(overspend2)
+    B8.addTx(overspend3)
+    B8.addTx(overspend4)
+
+    if B8.is_valid():
+        print("ERROR! Overspend not detected.")
+    else:
+        print("Success! Overspend detected.")

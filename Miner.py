@@ -6,6 +6,7 @@ import TxBlock
 import Transaction
 import pickle
 
+
 # Currently designed with 'Full Wallet' implementation
 
 wallets = [('localhost', 5005)]
@@ -26,6 +27,13 @@ def StopAll():
 def minerServer(my_addr):
     global tx_list
     global break_now
+    
+    # Load tx_list
+    try:
+        tx_list = loadTxList("Txs.dat")
+    except:
+        print("No previous Txs. Starting fresh.")
+        tx_list = []
 
     my_ip, my_port = my_addr
     # Open Server Connection
@@ -39,18 +47,40 @@ def minerServer(my_addr):
         if isinstance(newTx, Transaction.Tx):
             tx_list.append(newTx)
 
-        return False
+    saveTxList(tx_list, "Txs.dat")
+
+    return False
 
 ##
 def nonceFinder(wallet_list, miner_public):
     global break_now
 
+    # Load head_blocks
+    try:
+        head_blocks = TxBlock.loadBlocks("AllBlocks.dat")
+    except:
+        print("MINER: No previous blocks found. Starting fresh.")
+        head_blocks = [None]
+
     # Collect transactions into a block
     while not break_now:
         newBlock = TxBlock.TxBlock(TxBlock.findLongestBlockchain(head_blocks)) 
+
+        # Placeholder transaction, that stores an output transaction.
+        placeholder = Transaction.Tx()
+        placeholder.add_output(miner_public, 25.0)
+        newBlock.addTx(placeholder)
+
+        #TODO Sort tx_list by tx fee per byte. In 10000 byte want to cram in as many transactions fees we can.
         for tx in tx_list:
             newBlock.addTx(tx)
+            # Transaction is too big remove it.
+            if not newBlock.check_size():
+                newBlock.removeTx(tx)
+                break
  
+        newBlock.removeTx(placeholder)
+
         # Compute and collect Miner's reward
         total_in, total_out = newBlock.count_totals()
         miner_reward = Transaction.Tx()
@@ -78,6 +108,9 @@ def nonceFinder(wallet_list, miner_public):
             for tx in newBlock.data:
                 if tx != miner_reward:
                     tx_list.remove(tx)
+
+    # Save head-_blocks
+    TxBlock.saveBlocks(head_blocks, "AllBlocks.dat")
 
     return True
 
