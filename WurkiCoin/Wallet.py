@@ -12,6 +12,8 @@ break_now = False
 head_blocks = [None]
 wallets  = [('localhost', 5006)]
 miners = [('localhost', 5005)]
+#Transaction Index
+tx_index = {}
 
 my_private, my_public = Signature.generate_keys()
 
@@ -26,10 +28,17 @@ def walletServer(my_addr):
     try:
         # Save Wallet blocks to different file to Miner: AllBlocks.dat. 
         # Otherwise dangerous to read at the same time if you were writing to the same file.
-        head_blocks = TxBlock.loadBlocks("WalletBlocks.dat")
+        head_blocks = TxBlock.loadBlocks("AllBlocks.dat")
     except:
-        print("WS: No previous blocks found. Starting fresh.")
-        head_blocks = TxBlock.loadBlocks("Genesis.dat")
+        print("No previous blocks found. Starting fresh.")
+        head_blocks = [None] #TxBlock.loadBlocks("Genesis.dat")
+
+    try:
+        fp = open("tx_index", "rb")
+        tx_index = pickle.load(fp)
+        fp.close()
+    except:
+        tx_index = {}
     
     server = SocketUtils.newServerConnect('localhost', 5006)
 
@@ -73,10 +82,13 @@ def walletServer(my_addr):
                     print("ERROR! Couldn't find a parent for newBlock")
                     #TODO handle orphaned blocks. What is Child appears before the parent block?
     
+    server.close()
     # Save head_block
     TxBlock.saveBlocks(head_blocks, "WalletBlocks.dat")
 
-    server.close()  
+    fp = open("tx_index.dat", "wb")
+    pickle.dump(tx_index, fp)
+    fp.close()  
 
     return True
 
@@ -84,16 +96,22 @@ def walletServer(my_addr):
 ##
 def getbalance(pu_key):
     long_chain = TxBlock.findLongestBlockchain(head_blocks)
+    
     return TxBlock.getbalance(pu_key, long_chain)
 
 ##
 def sendCoins(pu_send, amt_send, pr_send, pu_recv, amt_recv):
     newTx = Transaction.Tx()
-    newTx.add_input(pu_send, amt_send)
+    if not pu_send in tx_index:
+        tx_index[pu_send] = 0
+    newTx.add_input(pu_send, amt_send, tx_index[pu_send])
     newTx.add_output(pu_recv, amt_recv)
     newTx.sign(pr_send)
+    
     for ip, port in miners:
         SocketUtils.sendBlock(ip,newTx,port)
+    tx_index[pu_send] += 1
+    
     return True
 
 

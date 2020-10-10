@@ -54,12 +54,23 @@ class TxBlock (CBlock):
             if not tx.is_valid():
                 return False
 
-            for addr, amt in tx.inputs:
+            for addr,amt,index in tx.inputs:
                 if addr in spends:
                     spends[addr] = spends[addr] + amt
                 else:
                     spends[addr] = amt
-
+                
+                if not index-1 == getLastTxIndex(addr, self.previousBlock):
+                    found = False
+                    count = 0
+                    for tx2 in self.data:
+                        for addr2, amt2, indx2 in tx2.inputs:
+                            if addr == addr2 and indx2 == index - 1:
+                                found=True
+                            if addr == addr2 and indx2 == index:
+                                count += 1
+                    if not found or count > 1:
+                        return False
 
             for addr, amt in tx.outputs:
                 if addr in spends:
@@ -92,7 +103,7 @@ class TxBlock (CBlock):
 
         for tx in self.data:
         
-            for addr, amt in tx.inputs:
+            for addr, amt, index in tx.inputs:
                 total_in = total_in + amt
 
             for addr, amt in tx.outputs:
@@ -168,7 +179,7 @@ def getbalance(pu_key, last_block):
 
     while this_block is not None:
         for tx in this_block.data:
-            for addr, amt in tx.inputs:
+            for addr,amt,index in tx.inputs:
                 if addr == pu_key:
                     bal -= amt
             for addr, amt in tx.outputs:
@@ -179,14 +190,44 @@ def getbalance(pu_key, last_block):
 
     return bal
 
+##
+##
+def getLastTxIndex(pu_key, last_block):
+    this_block = last_block
+    index = -1
+
+    while this_block is not None:
+        for tx in this_block.data:
+            for addr,amt,inx in tx.inputs:
+                if addr == pu_key and inx > index:
+                    index = inx
+        # Break loop if index found 
+        if index != -1:
+            break
+        this_block = this_block.previousBlock
+
+    return index
+
+
 
 if __name__ == "__main__":
     pr1, pu1 = generate_keys()
     pr2, pu2 = generate_keys()
     pr3, pu3 = generate_keys()
 
+    indeces = {}
+
+    def indexed_input(Tx_inout, public_key, index_map):
+        if not public_key in index_map:
+            index_map[public_key] = 0
+        
+        Tx_inout.add_input(public_key, amt, index_map[public_key])
+        index_map[public_key] += 1
+  
+
     Tx1 = Tx()
-    Tx1.add_input(pu1, 1)
+    indexed_input(Tx1, pu1, 1, pu_indeces)
+#   Tx1.add_input(pu1, 1)
     Tx1.add_output(pu2, 1)
     Tx1.sign(pr1)
 
@@ -215,20 +256,23 @@ if __name__ == "__main__":
     root.addTx(mine1)
 
     Tx2 = Tx()
-    Tx2.add_input(pu2, 1.1)
+    indexed_input(Tx2, pu2, 1.1, pu_indeces)
+#   Tx2.add_input(pu2, 1.1)
     Tx2.add_output(pu3, 1)
     Tx2.sign(pr2)
     root.addTx(Tx2)
 
     B1 = TxBlock(root)
     Tx3 = Tx()
-    Tx3.add_input(pu3, 1.1)
+    indexed_input(Tx3, pu3, 1.1, pu_indeces)
+#   Tx3.add_input(pu3, 1.1)
     Tx3.add_output(pu1, 1)
     Tx3.sign(pr3)
     B1.addTx(Tx3)
 
     Tx4 = Tx()
-    Tx4.add_input(pu1, 1)
+    indexed_input(Tx4, pu1, 1, pu_indeces)
+#   Tx4.add_input(pu2, 1)
     Tx4.add_output(pu2, 1)
     Tx4.add_reqd(pu3)
     Tx4.sign(pr1)
@@ -268,7 +312,8 @@ if __name__ == "__main__":
 
     B2 = TxBlock(B1)
     Tx5 = Tx()
-    Tx5.add_input(pu3, 1)
+    indexed_input(Tx5, pu3, 1, pu_indeces)
+#   Tx5.add_input(pu3, 1)
     Tx5.add_output(pu1, 100)
     Tx5.sign(pr3)
     B2.addTx(Tx5)
@@ -333,7 +378,8 @@ if __name__ == "__main__":
     for i in range(30):
         newTx = Tx()
         new_pr, new_pu = generate_keys()
-        newTx.add_input(this_pu, 0.3)
+        indexed_input(newTx, this_pu, 0.3, pu_indeces)
+#        newTx.add_input(this_pu, 0.3)
         newTx.add_output(new_pu, 0.3)
         newTx.sign(this_pr)
         B6.addTx(newTx)
@@ -352,9 +398,12 @@ if __name__ == "__main__":
             print("ERROR! Small blocks are invalid. Size = " + str(this_size))
         else:
             print("Success! Block size check passed")
-    
+    pu_indeces[pu4] = pu_indeces[pu4] - 1
+
+
     overspend = Tx()
-    overspend.add_input(pu1, 45.0)
+    indexed_input(overspend, pu1, 45.0, pu_indeces)
+#    overspend.add_input(pu1, 45.0)
     overspend.add_output(pu1, 44.5)
     overspend.sign(pr1)
     B7 = TxBlock(B4)
@@ -367,22 +416,26 @@ if __name__ == "__main__":
 
 
     overspend1 = Tx()
-    overspend1.add_input(pu1, 5.0)
+    indexed_input(overspend1, pu1, 5.0, pu_indeces)
+#    overspend1.add_input(pu1, 5.0)
     overspend1.add_output(pu1, 4.5)
     overspend1.sign(pr1)
 
     overspend2 = Tx()
-    overspend2.add_input(pu1, 15.0)
+    indexed_input(overspend2, pu1, 15.0, pu_indeces)
+#    overspend2.add_input(pu1, 15.0)
     overspend2.add_output(pu3, 14.5)
     overspend2.sign(pr1)
 
     overspend3 = Tx()
-    overspend3.add_input(pu1, 5.0)
+    indexed_input(overspend3, pu1, 5.0, pu_indeces)
+#    overspend3.add_input(pu1, 5.0)
     overspend3.add_output(pu4, 4.5)
     overspend3.sign(pr1)
 
     overspend4 = Tx()
-    overspend4.add_input(pu1, 8.0)
+    indexed_input(overspend4, pu1, 8.0, pu_indeces)
+#    overspend4.add_input(pu1, 8.0)
     overspend4.add_output(pu2, 4.5)
     overspend4.sign(pr1)
 

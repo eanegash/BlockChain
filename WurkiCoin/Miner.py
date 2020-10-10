@@ -45,6 +45,14 @@ def minerServer(my_addr):
 
         # isinstance requests if an Object is an Instance of a Class. 
         if isinstance(newTx, Transaction.Tx):
+            duplicate = False
+            for addr,amt,inx in newTx.inputs:
+                for tx in tx_list:
+                    for addr2, amt2, inx2 in tx.inputs:
+                        if addr2 == addr and inx2 == inx:
+                            duplicate = True
+            if duplicate:
+                break
             tx_list.append(newTx)
 
     saveTxList(tx_list, "Txs.dat")
@@ -59,8 +67,8 @@ def nonceFinder(wallet_list, miner_public):
     try:
         head_blocks = TxBlock.loadBlocks("AllBlocks.dat")
     except:
-        print("MINER: No previous blocks found. Starting fresh.")
-        head_blocks = TxBlock.loadBlocks("Genesis.dat")
+        # MINER: No previous blocks found. Starting fresh.
+        head_blocks = TxBlock.loadBlocks("GenesisBlock.dat")
 
     # Collect transactions and add to new block
     while not break_now:
@@ -137,8 +145,9 @@ if __name__ == "__main__":
     import time
     import Signature
 
-    my_pr, my_pu = Signature.generate_keys()
-    # args need to be passed as a TUPLE.
+    my_pr, my_pu = Signature.loadKeys("private.key", "public_key")
+
+    # args need to be passed as a TUPLE, in t1
     t1 = threading.Thread(target=minerServer, args=(('localhost', 5005),))
     t2 = threading.Thread(target=nonceFinder, args=(wallets, my_pu))
     

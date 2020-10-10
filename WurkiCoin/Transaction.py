@@ -17,9 +17,9 @@ class Tx:
         self.reqd = []
 
     ## Method to store Inbound Transactions
-    def add_input(self, from_addr, amount):
+    def add_input(self, from_addr, amount, index=0):
         # Tuple: inputs will represent a list of tuples representing addr(string) & amounts(float)
-        self.inputs.append((from_addr, amount))
+        self.inputs.append((from_addr, amount, index))
 
     ## Method to store Outbound Transactions
     def add_output(self, to_addr, amount):
@@ -41,7 +41,7 @@ class Tx:
         total_out = 0
         message = self.__gather()
         # Self.inputs -> List[Tuples(addr, amount)]
-        for addr, amount in self.inputs:
+        for addr, amount, index in self.inputs:
             found = False
             for s in self.sigs:
                 if Signature.verify(message, s, addr):
@@ -84,11 +84,11 @@ class Tx:
     # Called when converting to a string
     def __repr__(self):
         reprstr = "INPUTS:\n"
-        for addr, amt in self.inputs:
-            reprstr = reprstr + str(amt) + " from " + str(addr) + "\n"
+        for addr,amt,index in self.inputs:
+            reprstr = reprstr + str(amt) + " from " + str(addr) + " index = " + str(index) + "\n"
         
         reprstr = reprstr + "OUTPUTS:\n"
-        for addr, amt in self.outputs:
+        for addr,amt in self.outputs:
             reprstr = reprstr + str(amt) + " to " + str(addr) + "\n"
 
         reprstr = reprstr + "REQD:\n"
@@ -157,12 +157,14 @@ if __name__ == "__main__":
     Tx6.add_input(pul4, 0.1)
     Tx6.add_output(pul1, 1.1)
     Tx6.sign(pr3)
-    # Outputs exceed inputs
+    # 
     Tx7 = Tx()
-    Tx7.add_input(pul4, 1.2)
-    Tx7.add_output(pul1, 1)
-    Tx7.add_output(pul2, 2)
-    Tx7.sign(pr4)
+    Tx7.add_input(pul3, 1)
+    Tx7.add_output(pul4, 0.1)
+    Tx7.add_output(pul1, 1.1)
+    Tx7.sign(pr3)
+    tmp = Tx7.inputs[0]
+    Tx7.inputs[0] = (tmp[0], tmp[1], 78)
     # Negative 
     Tx8 = Tx()
     Tx8.add_input(pul2, -1)
@@ -175,7 +177,7 @@ if __name__ == "__main__":
     Tx9.sign(pr1)
     Tx9.outputs[0] = (pul3,1) # outputs = [(pul2, 1)] -- Modify -- [(pul3, 1)]
 
-    for t in [Tx4, Tx5, Tx6, Tx7, Tx8, Tx9]:
+    for t in [Tx4, Tx5, Tx6, Tx8, Tx9]:
         if t.is_valid():
             print("ERROR! Bad Tx is valid")
         else:
