@@ -10,6 +10,7 @@ wallets = []
 miners = []
 my_ip = 'localhost'
 wallets.append((my_ip, 5006))
+wallets.append((my_ip, 5007))
 miners.append((my_ip, 5005))
 
 tMS = None

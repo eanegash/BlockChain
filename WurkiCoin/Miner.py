@@ -27,6 +27,7 @@ def StopAll():
 def minerServer(my_addr):
     global tx_list
     global break_now
+    global head_blocks
     
     # Load tx_list
     try:
@@ -41,19 +42,26 @@ def minerServer(my_addr):
 
     # Receive transactions from wallet
     while not break_now:
-        newTx = SocketUtils.recvObj(server)
+        newObj = SocketUtils.recvObj(server)
 
         # isinstance requests if an Object is an Instance of a Class. 
-        if isinstance(newTx, Transaction.Tx):
+        if isinstance(newObj, Transaction.Tx):
             duplicate = False
-            for addr,amt,inx in newTx.inputs:
+            for addr,amt,inx in newObj.inputs:
                 for tx in tx_list:
                     for addr2, amt2, inx2 in tx.inputs:
                         if addr2 == addr and inx2 == inx:
                             duplicate = True
             if duplicate:
                 break
-            tx_list.append(newTx)
+            tx_list.append(newObj)
+        elif isinstance(newObj, TxBlock.TxBlock):
+            #Add new Blocks to BlockChain
+            TxBlock.processNewBlock(newObj, head_blocks)
+            # Transaction has been included need to remove.
+            for tx in newObj:
+                if tx in tx_list:
+                    tx_list.remove(tx)
 
     saveTxList(tx_list, "Txs.dat")
 
@@ -62,6 +70,7 @@ def minerServer(my_addr):
 ##
 def nonceFinder(wallet_list, miner_public):
     global break_now
+    global head_blocks
 
     # Load head_blocks
     try:
@@ -100,7 +109,8 @@ def nonceFinder(wallet_list, miner_public):
         newBlock.find_nonce(5000)
         if newBlock.valid_nonce():
             print("Success! Good nonce found.")
-
+            if not newBlock.previousBlock in head_blocks:
+                break
             # Replace the previously longest head in the set of blocks
             head_blocks.remove(newBlock.previousBlock)
             head_blocks.append(newBlock)
@@ -109,7 +119,7 @@ def nonceFinder(wallet_list, miner_public):
             savePrev = newBlock.previousBlock
             newBlock.previousBlock = None
             for ip_addr, port in wallet_list:
-                SocketUtils.sendObj(ip_addr, newBlock, 5006)
+                SocketUtils.sendObj(ip_addr, newBlock, port)
             newBlock.previousBlock = savePrev
 
             # Remove used transactions from tx_list

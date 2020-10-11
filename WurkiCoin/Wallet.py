@@ -12,6 +12,7 @@ break_now = False
 head_blocks = [None]
 wallets  = [('localhost', 5006)]
 miners = [('localhost', 5005)]
+#miners = [('localhost', 5005), ('localhost', 5007)]
 #Transaction Index
 tx_index = {}
 
@@ -23,6 +24,7 @@ def StopAll():
 ##
 def walletServer(my_addr):
     global head_blocks
+    global tx_index
     
     # Load head_blocks
     try:
@@ -45,42 +47,8 @@ def walletServer(my_addr):
     while not break_now:
         newBlock = SocketUtils.recvObj(server)
         if isinstance(newBlock, TxBlock.TxBlock):
-            found = False
-            print("Rec'd block")
-            for b in head_blocks:
-                if b == None:
-                    if newBlock.previousHash == None:
-                        found = True
-                        newBlock.previousBlock = b
-                        if not newBlock.is_valid():
-                            print("Nonce isn't valid.")
-                        else:
-                            head_blocks.remove(b)
-                            head_blocks.append(newBlock)
-                            print("Added to head_block")
-                elif newBlock.previousHash == b.computeHash():
-                    found = True
-                    newBlock.previousBlock = b
-                    if not newBlock.is_valid():
-                        print("Nonce isn't valid.")
-                    else:                    
-                        head_blocks.remove(b)
-                        head_blocks.append(newBlock)
-                        print("Added to head_block")    
-                #Add to an non-head block.
-                else:
-                    this_block = b
-                    while this_block != None:
-                        if newBlock.previousHash == this_block.previousHash:
-                            found = True
-                            newBlock.previousBlock = this_block.previousBlock
-                            if not newBlock in head_blocks:
-                                head_blocks.apend(newBlock)
-
-                        this_block = this_block.previousBlock
-                if not found:
-                    print("ERROR! Couldn't find a parent for newBlock")
-                    #TODO handle orphaned blocks. What is Child appears before the parent block?
+            TxBlock.processNewBlock(newBlock, head_blocks)
+        #TODO handle orphaned blocks. What is Child appears before the parent block?
     
     server.close()
     # Save head_block

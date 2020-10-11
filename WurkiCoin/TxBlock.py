@@ -209,6 +209,44 @@ def getLastTxIndex(pu_key, last_block):
     return index
 
 
+def processNewBlock(newBlock, head_blocks):
+    found = False
+    print("Rec'd block")
+    for b in head_blocks:
+        if b == None:
+            if newBlock.previousHash == None:
+                found = True
+                newBlock.previousBlock = b
+                if not newBlock.is_valid():
+                    print("Nonce isn't valid.")
+                else:
+                    head_blocks.remove(b)
+                    head_blocks.append(newBlock)
+                    print("Added to head_block")
+        elif newBlock.previousHash == b.computeHash():
+            found = True
+            newBlock.previousBlock = b
+            if not newBlock.is_valid():
+                print("Nonce isn't valid.")
+            else:                    
+                head_blocks.remove(b)
+                head_blocks.append(newBlock)
+                print("Added to head_block")    
+        #Add to an non-head block.
+        else:
+            this_block = b
+            while this_block != None:
+                if newBlock.previousHash == this_block.previousHash:
+                    found = True
+                    newBlock.previousBlock = this_block.previousBlock
+                    if not newBlock in head_blocks:
+                        head_blocks.apend(newBlock)
+
+                this_block = this_block.previousBlock
+        if not found:
+            print("ERROR! Couldn't find a parent for newBlock")   
+
+
 
 if __name__ == "__main__":
     pr1, pu1 = generate_keys()
